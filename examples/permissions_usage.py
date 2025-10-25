@@ -9,19 +9,25 @@ import os
 from dotenv import load_dotenv
 
 # Los siguientes imports funcionan gracias a `uv pip install -e .`
+import os
+from dotenv import load_dotenv
+import time
+
+# Los siguientes imports funcionan gracias a `uv pip install -e .`
 from autopoietic_orchestrator import create_orchestrator
-from permissions.permissions_manager import Action, PermissionRequest, InteractivePermissionsManager
+from permissions.permissions_manager import Action, InteractivePermissionsManager
+from commands import WriteFileCommand, ShellCommand
 
 
 load_dotenv()
 
 
-def ejemplo_permiso_interactivo():
+def ejemplo_patron_comando_interactivo():
     """
-    Ejemplo 1: Una tarea que requiere un permiso que será decidido por el usuario.
+    Ejemplo que demuestra el patrón Command con aprobación interactiva del usuario.
     """
     print("\n" + "="*80)
-    print("EJEMPLO 1: Permiso Interactivo")
+    print("EJEMPLO: Patrón Command con Permiso Interactivo")
     print("="*80)
 
     # 1. Crear una instancia del gestor de permisos INTERACTIVO
@@ -34,35 +40,46 @@ def ejemplo_permiso_interactivo():
         permissions_manager=permissions
     )
 
-    print("\nAhora se simularán dos solicitudes de permiso que requerirán tu aprobación.")
+    print("\nSe simularán solicitudes de ejecución de comandos que requerirán tu aprobación.")
 
-    # --- Solicitud 1: Escribir un archivo (acción importante) ---
-    request_write = PermissionRequest(
+    # --- Comando 1: Escribir un archivo (acción real) ---
+    file_path = os.path.join(os.getcwd(), "test_file.txt")
+    write_command = WriteFileCommand(
         agent_id="file_writer_agent",
-        action=Action.WRITE_FILE,
-        resource="/tmp/report.txt",
-        context={"data_size": "1024 bytes"}
+        file_path=file_path,
+        content=f"Este archivo fue escrito por un agente a las {time.ctime()}\n"
     )
 
-    print("\n--- Solicitud 1: Escritura de archivo ---")
-    if orchestrator.permissions_manager.request_permission(request_write):
-        print("\n✅ El usuario CONCEDIÓ el permiso para escribir el archivo.")
-    else:
-        print("\n❌ El usuario DENEGÓ el permiso para escribir el archivo.")
+    print("\n--- Solicitud 1: Comando de Escritura de Archivo ---")
+    result = orchestrator.permissions_manager.request_permission_and_execute(write_command)
 
-    # --- Solicitud 2: Eliminar un archivo (acción importante) ---
-    request_delete = PermissionRequest(
-        agent_id="cleanup_agent",
-        action=Action.DELETE_FILE,
-        resource="/tmp/old_data.csv",
-        context={"reason": "Deleting obsolete data"}
+    if result.success:
+        print(f"\n✅ {result.message}")
+        # Verificar que el archivo existe
+        if os.path.exists(file_path):
+            print(f"   VERIFICACIÓN: El archivo '{file_path}' ha sido creado exitosamente.")
+            # Limpieza
+            #os.remove(file_path)
+            #print(f"   LIMPIEZA: El archivo de prueba ha sido eliminado.")
+        else:
+            print(f"   VERIFICACIÓN FALLIDA: El archivo no fue encontrado.")
+    else:
+        print(f"\n❌ {result.message}")
+
+    # --- Comando 2: Ejecutar un comando de shell ---
+    shell_command = ShellCommand(
+        agent_id="system_info_agent",
+        command="echo 'Hola desde un comando de shell'"
     )
 
-    print("\n--- Solicitud 2: Eliminación de archivo ---")
-    if orchestrator.permissions_manager.request_permission(request_delete):
-        print("\n✅ El usuario CONCEDIÓ el permiso para eliminar el archivo.")
+    print("\n--- Solicitud 2: Comando de Ejecución de Shell ---")
+    result = orchestrator.permissions_manager.request_permission_and_execute(shell_command)
+
+    if result.success:
+        print(f"\n✅ {result.message}")
+        print(f"   SALIDA DEL COMANDO:\n---\n{result.output.strip()}\n---")
     else:
-        print("\n❌ El usuario DENEGÓ el permiso para eliminar el archivo.")
+        print(f"\n❌ {result.message}")
 
 
 def ejemplo_listado_de_acciones():
@@ -70,7 +87,7 @@ def ejemplo_listado_de_acciones():
     Muestra todas las acciones que pueden ser permisionadas.
     """
     print("\n" + "="*80)
-    print("EJEMPLO 3: Acciones Disponibles para Permisos")
+    print("EJEMPLO: Acciones Disponibles para Permisos")
     print("="*80)
 
     print("\n📋 Acciones que el sistema de permisos puede gestionar:")
@@ -81,10 +98,10 @@ def ejemplo_listado_de_acciones():
 
 if __name__ == "__main__":
     print("\n" + "🛡️ "*40)
-    print("EJEMPLOS DE USO - SISTEMA DE PERMISOS INTERACTIVO")
+    print("EJEMPLO - PATRÓN COMMAND CON PERMISOS INTERACTIVOS")
     print("🛡️ "*40)
 
-    ejemplo_permiso_interactivo()
+    ejemplo_patron_comando_interactivo()
     ejemplo_listado_de_acciones()
 
     print("\n" + "✅"*40)

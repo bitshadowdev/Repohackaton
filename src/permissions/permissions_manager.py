@@ -55,6 +55,9 @@ class PermissionsManager:
         return True
 
 
+from commands import Command, CommandResult
+
+
 class InteractivePermissionsManager:
     """
     A permissions manager that prompts the user for a decision on important actions.
@@ -69,21 +72,22 @@ class InteractivePermissionsManager:
         else:
             self.important_actions = set(important_actions)
 
-    def request_permission(self, request: PermissionRequest) -> bool:
+    def request_permission_and_execute(self, command: Command) -> CommandResult:
         """
-        Evaluates a permission request by prompting the user if the action is important.
+        Evaluates a permission request and executes the command if the user grants permission.
 
         Args:
-            request: The permission request to evaluate.
+            command: The command object to evaluate and execute.
 
         Returns:
-            True if the action is permitted by the user, False otherwise.
+            A CommandResult indicating the outcome.
         """
+        request = command.permission_request
         print(f"Permission request from agent '{request.agent_id}' for action '{request.action.value}' on resource '{request.resource}'.")
 
         if request.action not in self.important_actions:
-            print("-> Decision: GRANTED (action is not considered important).")
-            return True
+            print("-> Decision: GRANTED (action is not considered important). Executing...")
+            return command.execute()
 
         # Prompt the user for a decision
         print("\n" + "!"*80)
@@ -97,15 +101,15 @@ class InteractivePermissionsManager:
         
         while True:
             try:
-                response = input("  > Grant permission? (yes/no): ").lower().strip()
+                response = input("  > Grant permission and execute? (yes/no): ").lower().strip()
                 if response in ["yes", "y"]:
-                    print("-> Decision: GRANTED by user.")
-                    return True
+                    print("-> Decision: GRANTED by user. Executing...")
+                    return command.execute()
                 elif response in ["no", "n"]:
                     print("-> Decision: DENIED by user.")
-                    return False
+                    return CommandResult(success=False, message="Execution denied by user.")
                 else:
                     print("  > Invalid input. Please enter 'yes' or 'no'.")
             except (EOFError, KeyboardInterrupt):
                 print("\n-> Decision: DENIED (no user input received).")
-                return False
+                return CommandResult(success=False, message="Execution denied due to no user input.")
