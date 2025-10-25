@@ -13,6 +13,7 @@ from langchain_core.messages import HumanMessage
 
 from orchestrator_state import OrchestratorState, AgentSpec
 from agent_repository import AgentRepository
+from event import Event
 
 
 class DirectExecutionNode:
@@ -198,7 +199,15 @@ class StructuralDiagnosisNode:
         
         # Generar propuesta de nuevo agente
         agent_proposal = self._design_new_agent(user_task, gap_analysis)
-        
+
+        # Crear un evento que requiere confirmación
+        Event(
+            event_type="new_agent_proposal",
+            event_name=f"New agent proposal: {agent_proposal.get('agent_id', 'N/A')}",
+            event_description=f"A new agent with role '{agent_proposal.get('role', 'N/A')}' has been proposed.",
+            requires_confirmation=True
+        )
+
         # En una implementación completa, aquí iríamos a:
         # - Ensayo en sandbox
         # - Evaluación A/B

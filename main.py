@@ -14,6 +14,7 @@ sys.path.insert(0, str(src_path))
 
 from autopoietic_orchestrator import create_orchestrator
 from dotenv import load_dotenv
+from event_manager import EventManager
 
 
 def main():
@@ -123,6 +124,21 @@ def main():
                     content = getattr(last_msg, "content", str(last_msg))
                     print(content)
             
+            # Manejar eventos que requieren confirmación
+            event_manager = EventManager()
+            events_to_confirm = [event for event in event_manager.events.values() if event.requires_confirmation]
+            
+            for event in events_to_confirm:
+                print(f"\n[CONFIRMACIÓN REQUERIDA] {event.event_description}")
+                confirmation = input("¿Proceder? (Y/n): ").strip().lower()
+                if confirmation == 'y':
+                    print(f"Evento '{event.event_name}' confirmado.")
+                    # Aquí se podría ejecutar la acción asociada al evento
+                else:
+                    print(f"Evento '{event.event_name}' cancelado.")
+                # Eliminar el evento después de manejarlo
+                del event_manager.events[event.event_time]
+
             print("\n" + "=" * 80)
         
         except KeyboardInterrupt:

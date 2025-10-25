@@ -9,3 +9,6 @@ class SingletonMeta(type):
 class EventManager(metaclass=SingletonMeta): 
     def __init__(self):
         self.events = {}
+
+    def register_event(self, event):
+        self.events[event.event_time] = event

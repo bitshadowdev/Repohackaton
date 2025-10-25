@@ -204,6 +204,7 @@ class AutopoieticOrchestrator:
         api_key: Optional[str] = None,
         enable_checkpointing: bool = True,
         llm: Optional[Any] = None,
+        permissions_manager: Optional[Any] = None,  # Añadido
     ):
         """
         Inicializa el orquestador autopoiético.
@@ -213,9 +214,13 @@ class AutopoieticOrchestrator:
             base_url: URL base para API compatible con OpenAI
             api_key: Clave API
             enable_checkpointing: Si se habilita persistencia
+            permissions_manager: Gestor de permisos (opcional)
         """
         # Inicializar repositorio de agentes
         self.agent_repository = AgentRepository()
+        
+        # Asignar gestor de permisos
+        self.permissions_manager = permissions_manager
         
         # Preparar instancia LLM común para todos los nodos (inyectable)
         self.llm = llm or self._build_default_llm(model_name=model_name, base_url=base_url, api_key=api_key)
@@ -303,7 +308,7 @@ class AutopoieticOrchestrator:
             auth_token = os.getenv("CLOUDFLARE_AUTH_TOKEN")
             model = os.getenv("CLOUDFLARE_MODEL", "@cf/openai/gpt-oss-120b")
             
-            if not account_id or not auth_token:
+            if not account_id or not auth_token:                                            
                 raise ValueError(
                     "Para usar Cloudflare, configura CLOUDFLARE_ACCOUNT_ID y "
                     "CLOUDFLARE_AUTH_TOKEN en .env"
@@ -463,6 +468,7 @@ def create_orchestrator(
     base_url: Optional[str] = None,
     api_key: Optional[str] = None,
     llm_provider: str = "openai",
+    permissions_manager: Optional[Any] = None,  # Añadido
 ) -> AutopoieticOrchestrator:
     """
     Factory function para crear un orquestador autopoiético.
@@ -546,4 +552,5 @@ def create_orchestrator(
         base_url=base_url,
         api_key=api_key,
         llm=llm,
+        permissions_manager=permissions_manager,  # Añadido
     )
