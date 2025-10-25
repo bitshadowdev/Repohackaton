@@ -12,3 +12,4 @@ class Event:
         self.event_name = event_name 
         # Esta descripcion proviene de la IA
         self.event_description = event_description
+ 
