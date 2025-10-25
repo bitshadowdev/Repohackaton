@@ -17,7 +17,7 @@ class AgentRepository:
     Este es el componente que almacena la 'estructura' (agentes concretos)
     mientras se mantiene la 'organización' (invariantes y roles).
     """
-    
+    # Catalogo de agentes 
     def __init__(self):
         self._catalog: dict[str, AgentSpec] = {}
         self._initialize_default_agents()
@@ -64,7 +64,10 @@ Proporciona información basada en datos meteorológicos actuales.""",
             version="1.0.0",
             active=True
         ))
-    
+    ###
+    # Helpers para estructuras de datos
+    ###
+
     def add_agent(self, spec: AgentSpec) -> None:
         """
         Añade una especificación de agente al catálogo.
@@ -83,6 +86,7 @@ Proporciona información basada en datos meteorológicos actuales.""",
         """
         return [spec for spec in self._catalog.values() if spec.active]
     
+    # Filtra
     def find_agent_by_capability(self, capability: str) -> list[AgentSpec]:
         """
         Busca agentes que tengan una capacidad específica.
@@ -92,6 +96,7 @@ Proporciona información basada en datos meteorológicos actuales.""",
             if capability in spec.capabilities and spec.active
         ]
     
+    # Actualiza
     def update_agent(self, agent_id: str, updates: dict) -> bool:
         """
         Actualiza una especificación de agente existente.

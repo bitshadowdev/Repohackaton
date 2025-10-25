@@ -26,6 +26,66 @@ from langchain_core.language_models.llms import BaseLLM
 from langchain_core.messages import BaseMessage, AIMessage, HumanMessage, SystemMessage
 from langchain_core.callbacks.manager import CallbackManagerForLLMRun
 from langchain_core.outputs import Generation, LLMResult
+from abc import ABC, abstractmethod
+
+
+class CloudflareResponseParser(ABC):
+    """Clase base abstracta para analizar las respuestas de la IA de Cloudflare."""
+    @abstractmethod
+    def parse(self, data: Dict[str, Any]) -> Optional[str]:
+        """
+        Analiza los datos de respuesta y devuelve el contenido del mensaje si se encuentra.
+        """
+        pass
+
+class OutputFormatParser(CloudflareResponseParser):
+    """Analiza el formato 'output' de Cloudflare."""
+    def parse(self, data: Dict[str, Any]) -> Optional[str]:
+        if "output" not in data:
+            return None
+        
+        output_list = data["output"]
+        if not isinstance(output_list, list):
+            return None
+
+        for item in output_list:
+            if isinstance(item, dict) and item.get("type") == "message":
+                if item.get("role") == "assistant" and "content" in item:
+                    content_list = item["content"]
+                    if isinstance(content_list, list):
+                        for content_item in content_list:
+                            if isinstance(content_item, dict):
+                                if content_item.get("type") == "output_text" and "text" in content_item:
+                                    return content_item["text"]
+        return None
+
+class ResultFormatParser(CloudflareResponseParser):
+    """Analiza el formato 'result' de Cloudflare."""
+    def parse(self, data: Dict[str, Any]) -> Optional[str]:
+        if "result" not in data:
+            return None
+            
+        result_data = data["result"]
+        
+        if isinstance(result_data, list) and len(result_data) > 0:
+            for item in result_data:
+                if isinstance(item, dict):
+                    if item.get("role") == "assistant" and "content" in item:
+                        content_list = item["content"]
+                        if isinstance(content_list, list):
+                            for content_item in content_list:
+                                if isinstance(content_item, dict):
+                                    # Priorizar output_text
+                                    if content_item.get("type") == "output_text" and "text" in content_item:
+                                        return content_item["text"]
+                                    # Fallback a cualquier texto
+                                    elif "text" in content_item:
+                                        return content_item["text"]
+        
+        if isinstance(result_data, str):
+            return result_data
+            
+        return None
 
 
 class CloudflareWorkersAI(BaseLLM):
@@ -40,7 +100,11 @@ class CloudflareWorkersAI(BaseLLM):
     
     def __init__(self, account_id: str, auth_token: str, model: str = "@cf/meta/llama-2-7b-chat-int8", **kwargs):
         super().__init__(account_id=account_id, auth_token=auth_token, model=model, **kwargs)
-    
+        self.response_parsers: List[CloudflareResponseParser] = [
+            OutputFormatParser(),
+            ResultFormatParser(),
+        ]
+
     @property
     def _llm_type(self) -> str:
         return "cloudflare_workers_ai"
@@ -70,48 +134,11 @@ class CloudflareWorkersAI(BaseLLM):
             response.raise_for_status()
             result = response.json()
             
-            # Extraer el texto de la respuesta de Cloudflare
-            # Formato nuevo: {output: [{type: 'reasoning'}, {type: 'message', content: [{type: 'output_text', text: '...'}]}]}
             if isinstance(result, dict):
-                # Primero intentar formato 'output'
-                if "output" in result:
-                    output_list = result["output"]
-                    if isinstance(output_list, list):
-                        # Buscar el mensaje con type='message' y role='assistant'
-                        for item in output_list:
-                            if isinstance(item, dict) and item.get("type") == "message":
-                                if item.get("role") == "assistant" and "content" in item:
-                                    content_list = item["content"]
-                                    if isinstance(content_list, list):
-                                        # Buscar específicamente 'output_text' (no 'reasoning_text')
-                                        for content_item in content_list:
-                                            if isinstance(content_item, dict):
-                                                if content_item.get("type") == "output_text" and "text" in content_item:
-                                                    return content_item["text"]
-                
-                # Formato alternativo 'result'
-                elif "result" in result:
-                    result_data = result["result"]
-                    
-                    if isinstance(result_data, list) and len(result_data) > 0:
-                        # Buscar mensaje con role='assistant'
-                        for item in result_data:
-                            if isinstance(item, dict):
-                                if item.get("role") == "assistant" and "content" in item:
-                                    content_list = item["content"]
-                                    if isinstance(content_list, list):
-                                        for content_item in content_list:
-                                            if isinstance(content_item, dict):
-                                                # Priorizar output_text
-                                                if content_item.get("type") == "output_text" and "text" in content_item:
-                                                    return content_item["text"]
-                                                # Fallback a cualquier texto
-                                                elif "text" in content_item:
-                                                    return content_item["text"]
-                    
-                    # Si result es string directo
-                    if isinstance(result_data, str):
-                        return result_data
+                for parser in self.response_parsers:
+                    parsed_text = parser.parse(result)
+                    if parsed_text is not None:
+                        return parsed_text
             
             # Fallback: devolver todo como string
             return str(result)
