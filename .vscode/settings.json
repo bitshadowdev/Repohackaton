@@ -1,0 +1,6 @@
+{
+    // Establece el intérprete Python del workspace al venv creado (Python 3.13)
+    "python.defaultInterpreterPath": "C:/Users/56931/docs/.venv/Scripts/python.exe",
+    // Opcional: formateador por defecto
+    "python.formatting.provider": "black"
+}

@@ -230,13 +230,13 @@ if __name__ == "__main__":
     # Ejecutar ejemplos
     # Descomenta los que quieras probar:
     
-    # ejemplo_1_tarea_simple()
+    ejemplo_1_tarea_simple()
     # ejemplo_2_agente_especializado()
     # ejemplo_3_metaproduccion()
     # ejemplo_4_agregar_agente()
     # ejemplo_5_conversacion_multiturno()
     # ejemplo_6_streaming()
-    ejemplo_7_catalogo_completo()
+    # ejemplo_7_catalogo_completo()
     
     print("\n" + "✅" * 40)
     print("FIN DE EJEMPLOS")
